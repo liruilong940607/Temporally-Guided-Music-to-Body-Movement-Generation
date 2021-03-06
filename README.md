@@ -12,7 +12,7 @@ To get started as quickly as possible, follow the instructions in this section. 
 
 ### Dependencies
 - Python 3+ distribution
-- Pytorch >= 1.0.1, CUDA 10.0  
+- Pytorch >= 1.0.1, CUDA 10.0: `conda install pytorch==1.5.0 torchvision==0.6.0 -c pytorch`
 - Install requirements by running: `pip install -r requirement.txt`
 - To visualize predictions, install ffmpeg by running: `apt-get install ffmpeg`
 
