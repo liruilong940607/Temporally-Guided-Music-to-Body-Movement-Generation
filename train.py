@@ -13,7 +13,7 @@ from metric import L1_loss
 from model.utils import sort_sequences
 from model.network import MovementNet
 from model.optimizer import Optimizer
-
+import vedo
 
 torch.manual_seed(0)
 torch.cuda.manual_seed_all(0)
@@ -29,10 +29,14 @@ def main():
         gpu_ids = [i for i in range(len(args.gpu_ids.split(',')))]
 
     # Data
-    download_data = Download()
-    download_data.train_data()
-    train_dataset = audio_skeleton_dataset(download_data.train_dst, 'train')
-    val_dataset = audio_skeleton_dataset(download_data.train_dst, 'val')
+    if args.aist:
+        train_dataset = audio_skeleton_dataset(args.anno_dir, 'train', is_aist=True, smpl_dir=args.smpl_dir, audio_dir=args.audio_dir)
+        val_dataset = audio_skeleton_dataset(args.anno_dir, 'valtest', is_aist=True, smpl_dir=args.smpl_dir, audio_dir=args.audio_dir)
+    else:
+        download_data = Download()
+        download_data.train_data()
+        train_dataset = audio_skeleton_dataset(download_data.train_dst, 'train')
+        val_dataset = audio_skeleton_dataset(download_data.train_dst, 'val')
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=args.batch, shuffle=False)
@@ -50,8 +54,7 @@ def main():
 
     #------------------------ START TRAINING ---------------------------------#
     print('Training... \n' )
-    if args.early_stop_iter > 0:
-        counter = 0
+    counter = 0
     min_val_loss = float('inf')
 
     Epoch_train_loss = []
@@ -85,6 +88,18 @@ def main():
 
         # Validation stage
         movement_net.eval()
+
+        if args.aist and True: # visualize
+            print ("starting visualize")
+            pred = full_output[0].detach().cpu().numpy()
+        
+            # Transform keypoints to world coordinate
+            pred = pred * train_dataset.keypoints_std + train_dataset.keypoints_mean
+            pred = np.reshape(pred, [len(pred), -1, 3])
+        
+            for kpts in pred[:300]:
+                pts = vedo.Points(kpts, r=20)
+                vedo.show(pts, interactive=False)
 
         pose_loss = []
         with torch.no_grad():

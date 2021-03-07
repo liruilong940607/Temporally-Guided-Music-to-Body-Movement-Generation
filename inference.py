@@ -9,6 +9,7 @@ import torch.nn as nn
 from data import Download, preprocess
 from model.network import MovementNet
 from visualize.animation import plot
+import vedo
 
 
 def main():
@@ -24,15 +25,23 @@ def main():
         os.environ["CUDA_DEVICE_ORDER"] = 'PCI_BUS_ID'
         os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_ids
     
-    # Load pretrain model
-    download_data = Download()
-    download_data.pretrain_model()
-    checkpoint = torch.load(download_data.pretrain_model_dst, map_location='cuda:0' if torch.cuda.is_available() else 'cpu')
-    keypoints_mean, keypoints_std = checkpoint['keypoints_mean'], checkpoint['keypoints_std']
-    aud_mean, aud_std = checkpoint['aud_mean'], checkpoint['aud_std']
+    if args.aist:
+        # Model
+        print ("load ckpt from", args.checkpoint)
+        checkpoint = torch.load(args.checkpoint, map_location='cuda:0' if torch.cuda.is_available() else 'cpu')
+        keypoints_mean, keypoints_std = 0.0, 1.0
+        aud_mean, aud_std = 0.0, 1.0
+        aud = preprocess(args.inference_audio, aud_mean, aud_std, sr=30720, hop=512)[:args.max_len]
+    else:
+        # Load pretrain model
+        download_data = Download()
+        download_data.pretrain_model()
+        checkpoint = torch.load(download_data.pretrain_model_dst, map_location='cuda:0' if torch.cuda.is_available() else 'cpu')
+        keypoints_mean, keypoints_std = checkpoint['keypoints_mean'], checkpoint['keypoints_std']
+        aud_mean, aud_std = checkpoint['aud_mean'], checkpoint['aud_std']
     
-    # Audio pre-processing
-    aud = preprocess(args.inference_audio, aud_mean, aud_std)
+        # Audio pre-processing    
+        aud = preprocess(args.inference_audio, aud_mean, aud_std)
     
     # Model
     movement_net = MovementNet(args.d_input, args.d_output_body, args.d_output_rh, args.d_model, args.n_block, args.n_unet, args.n_attn, args.n_head, args.max_len, args.dropout,
@@ -41,7 +50,7 @@ def main():
     movement_net.eval()
     
     with torch.no_grad():
-        print('inference...')
+        print('inference...', aud.shape)
         X_test = torch.tensor(aud, dtype=torch.float32).to('cuda:0' if torch.cuda.is_available() else 'cpu').unsqueeze(0)
         lengths = X_test.size(1)
         lengths = torch.tensor(lengths).to('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -56,9 +65,13 @@ def main():
         pred = pred * keypoints_std + keypoints_mean
         pred = np.reshape(pred, [len(pred), -1, 3])
       
-    plot(args.inference_audio, args.plot_path, pred)
-    with open(args.output_path, 'wb') as f:
-        pickle.dump(pred, f)
+        for kpts in pred:
+            pts = vedo.Points(kpts, r=20)
+            vedo.show(pts, interactive=False)
+
+    # plot(args.inference_audio, args.plot_path, pred)
+    # with open(args.output_path, 'wb') as f:
+        # pickle.dump(pred, f)
 
 if __name__ == '__main__':
     main()

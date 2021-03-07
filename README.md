@@ -26,6 +26,21 @@ To reproduce the results, run following commands:
 ```
 python train.py --d_model 512 --gpu_ids 0
 python test.py --plot_path xxx.mp4 --output_path xxx.pkl
+
+# on AIST++ dataset
+DATADIR=/media/ruilongli/hd1/Data
+python train.py --d_model 510 --gpu_ids 0 \
+    --aist --anno_dir $DATADIR/aist_plusplus/v1 \
+    --audio_dir $DATADIR/aist_plusplus/wav \
+    --smpl_dir $DATADIR/smpl \
+    --d_output_body 0 \
+    --d_output_rh 72 \
+    --max_len 1200  \
+    --n_attn 12 \
+    --n_head 10 \
+    --checkpoint checkpoint/aist_best.pth \
+    --early_stop_iter -1 \
+    --epoch 1000
 ```
 If you have problem with limited gpu memory usage, try to decrease `--d_model` or use multi-gpu `--gpu_ids 0,1,2`.
 - `--plot_path` make video of predicted playing movement. We here specify one of violinist for visualization.
@@ -35,5 +50,18 @@ If you have problem with limited gpu memory usage, try to decrease `--d_model` o
 If you want to make video and get predicted keypoints for custom audio data by pretrained model, run following commands:
 ```
 python inference.py --inference_audio xxx.wav --plot_path xxx.mp4 --output_path xxx.pkl
+
+# on AIST++ dataset
+python inference.py --d_model 510 --gpu_ids 0 \
+    --aist \
+    --d_output_body 0 \
+    --d_output_rh 72 \
+    --max_len 1200  \
+    --n_attn 12 \
+    --n_head 10 \
+    --checkpoint checkpoint/aist_best.pth \
+    --inference_audio /media/ruilongli/hd1/Data/aist_plusplus/wav/mBR0.wav \
+    --checkpoint ./checkpoint/aist_best.pth
+
 ```
 `--plot_path` and `--output_path` are the same as described in **test.py**, and you need to put the path of your violin music on argument `--inference_audio`.

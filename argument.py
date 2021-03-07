@@ -26,4 +26,9 @@ def parse():
     parser.add_argument('--dropout', type=float, default=0.1, help='dropout rate')
     parser.add_argument('--pre_lnorm', type=bool, default=False, help='applying pre-layer normalization or not')
     parser.add_argument('--attn_type', type=str, default='rel', help='the type of self-attention') 
+
+    parser.add_argument('--aist', action='store_true', help='wether to train on AIST++ dataset.') 
+    parser.add_argument('--anno_dir', type=str, help='where is the AIST++ dataset.') 
+    parser.add_argument('--smpl_dir', type=str, help='where is the SMPL data that needed by AIST++ dataset.') 
+    parser.add_argument('--audio_dir', type=str, help='where is the AIST++ audio data.') 
     return parser

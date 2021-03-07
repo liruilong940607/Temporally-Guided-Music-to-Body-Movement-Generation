@@ -82,7 +82,10 @@ class MovementNet(nn.Module):
         super(MovementNet, self).__init__()
         self.gpu = gpu
         
-        self.bodynet = Generator(d_input, d_model, d_output_body, dropout)
+        if d_output_body > 0:
+            self.bodynet = Generator(d_input, d_model, d_output_body, dropout)
+        else:
+            self.bodynet = None
         self.handencoder = HandEncoder(d_input, d_model, n_block, n_unet, n_attn, n_head, max_len, dropout, 
                                        pre_layernorm, attn_type)
         self.handdecoder = Generator(d_model, d_model, d_output_rh, dropout)
@@ -97,14 +100,20 @@ class MovementNet(nn.Module):
         Returns:
             output: [B, T, (K*3)]
         """
-        body_output = self.bodynet(inputs, lengths)
-        
-        enc_output = self.handencoder.forward(inputs, lengths, return_attns=return_attns)
-        rh_output = self.handdecoder.forward(enc_output, lengths)
-        rh_refined = self.refine_network(enc_output)
-        rh_refined = rh_output[:, :, -3:] + rh_refined
-        rh_final = torch.cat([rh_output[:, :, :-3], rh_refined], dim=-1)
-        full_output = torch.cat([body_output, rh_final], dim=-1)
+        if self.bodynet:
+            body_output = self.bodynet(inputs, lengths)        
+            enc_output = self.handencoder.forward(inputs, lengths, return_attns=return_attns)
+            rh_output = self.handdecoder.forward(enc_output, lengths)
+            rh_refined = self.refine_network(enc_output)
+            rh_refined = rh_output[:, :, -3:] + rh_refined  # root
+            rh_final = torch.cat([rh_output[:, :, :-3], rh_refined], dim=-1)
+            full_output = torch.cat([body_output, rh_final], dim=-1)
+        else: # AIST++ dataset
+            enc_output = self.handencoder.forward(inputs, lengths, return_attns=return_attns)
+            output = self.handdecoder.forward(enc_output, lengths)
+            refined = self.refine_network(enc_output)
+            refined = output[:, :, :3] + refined  # root
+            full_output = torch.cat([refined, output[:, :, 3:]], dim=-1)
         return full_output
         
         
